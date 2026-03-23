@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>AvtoFair</title>
+    <link rel="stylesheet" href="styles/popup.css">
+  </head>
+  <body>
+    <div class="popup-shell">
+      <header class="hero-card">
+        <div class="hero-brand">
+          <img src="assets/logo.svg" alt="AvtoFair logo" class="hero-logo">
+          <div>
+            <div class="eyebrow">FlegarTech</div>
+            <h1>AvtoFair</h1>
+            <p>Know if the price is fair before you buy.</p>
+          </div>
+        </div>
+        <div class="hero-pill" id="hero-pill">Panel-First</div>
+      </header>
+
+      <div class="dashboard-grid">
+        <section class="panel" id="current-panel">
+          <div class="section-head">
+            <div>
+              <div class="eyebrow">Current Page</div>
+              <h2>Listing summary</h2>
+            </div>
+            <button class="icon-btn" id="refresh-current-btn" type="button">Refresh</button>
+          </div>
+          <div id="current-content" class="panel-body"></div>
+        </section>
+
+        <section class="panel">
+          <div class="section-head">
+            <div>
+              <div class="eyebrow">Watchlist</div>
+              <h2>Saved cars</h2>
+            </div>
+            <button class="icon-btn" id="refresh-watchlist-btn" type="button">Refresh all</button>
+          </div>
+          <div id="watchlist-content" class="watchlist-list"></div>
+        </section>
+      </div>
+
+      <section class="panel panel--settings">
+        <div class="section-head">
+          <div>
+            <div class="eyebrow">Settings</div>
+            <h2>Extension controls</h2>
+          </div>
+        </div>
+        <div class="settings-grid">
+          <label class="setting-row">
+            <span>Show floating panel</span>
+            <input type="checkbox" id="setting-show-panel">
+          </label>
+          <label class="setting-row">
+            <span>Auto-run analysis on page load</span>
+            <input type="checkbox" id="setting-auto-run">
+          </label>
+          <label class="setting-row">
+            <span>Price-drop notifications</span>
+            <input type="checkbox" id="setting-notifications">
+          </label>
+          <label class="setting-row">
+            <span>Default collapsed panel</span>
+            <input type="checkbox" id="setting-default-collapsed">
+          </label>
+          <label class="setting-row">
+            <span>Compact panel mode</span>
+            <input type="checkbox" id="setting-compact-panel">
+          </label>
+          <label class="setting-row">
+            <span>Remember panel position</span>
+            <input type="checkbox" id="setting-remember-position">
+          </label>
+          <label class="setting-row">
+            <span>Refresh saved items on popup open</span>
+            <input type="checkbox" id="setting-auto-refresh">
+          </label>
+          <label class="setting-row">
+            <span>Watchlist density</span>
+            <select id="setting-density">
+              <option value="detailed">Detailed</option>
+              <option value="compact">Compact</option>
+            </select>
+          </label>
+        </div>
+      </section>
+
+      <footer class="footer-card">
+        <div>
+          <strong>Built by FlegarTech</strong>
+          <p>If AvtoFair saved you money, consider supporting development.</p>
+        </div>
+        <button class="support-btn" id="support-btn" type="button">Support AvtoFair</button>
+      </footer>
+      <div id="status-bar" class="status-bar" aria-live="polite"></div>
+    </div>
+
+    <script src="lib/constants.js"></script>
+    <script src="lib/utils.js"></script>
+    <script src="popup.js"></script>
+  </body>
+</html>
