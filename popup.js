@@ -1,5 +1,6 @@
 (function initPopup(globalScope) {
-  const { Constants, Utils } = globalScope.AvtoFair;
+  const { Constants, Utils, I18n } = globalScope.AvtoFair;
+  const t = (key, vars) => I18n ? I18n.t(key, vars) : key;
   const searchParams = new URLSearchParams(globalScope.location.search);
   const dashboardMode = searchParams.get("dashboard") === "1";
 
@@ -34,6 +35,38 @@
     dom.statusBar.dataset.error = isError ? "true" : "false";
   }
 
+  function setLanguage(lang) {
+    if (I18n) {
+      I18n.setLang(lang || "en");
+    }
+  }
+
+  function renderStaticText() {
+    document.getElementById("hero-subtitle").textContent = t("appSubtitle");
+    document.getElementById("current-page-eyebrow").textContent = t("currentPage");
+    document.getElementById("listing-summary-title").textContent = t("listingSummary");
+    document.getElementById("watchlist-eyebrow").textContent = t("watchlist");
+    document.getElementById("saved-cars-title").textContent = t("savedCars");
+    document.getElementById("settings-eyebrow").textContent = t("settings");
+    document.getElementById("extension-controls-title").textContent = t("extensionControls");
+    document.getElementById("label-show-panel").textContent = t("showFloatingPanel");
+    document.getElementById("label-auto-run").textContent = t("autoRunAnalysis");
+    document.getElementById("label-notifications").textContent = t("priceDropNotifications");
+    document.getElementById("label-default-collapsed").textContent = t("defaultCollapsedPanel");
+    document.getElementById("label-compact-panel").textContent = t("compactPanelMode");
+    document.getElementById("label-remember-position").textContent = t("rememberPanelPosition");
+    document.getElementById("label-auto-refresh").textContent = t("refreshSavedItemsOnPopupOpen");
+    document.getElementById("label-density").textContent = t("watchlistDensity");
+    document.getElementById("density-detailed").textContent = t("detailed");
+    document.getElementById("density-compact").textContent = t("compact");
+    document.getElementById("built-by").textContent = t("builtBy");
+    document.getElementById("support-text").textContent = t("supportText");
+    dom.supportBtn.textContent = t("supportButton");
+    dom.refreshCurrentBtn.textContent = t("refresh");
+    dom.refreshWatchlistBtn.textContent = t("refreshAll");
+    dom.heroPill.textContent = dashboardMode ? t("dashboard") : t("panelFirst");
+  }
+
   function runtimeSend(message) {
     return chrome.runtime.sendMessage(message);
   }
@@ -53,25 +86,108 @@
     return chrome.tabs.sendMessage(popupState.activeTab.id, message);
   }
 
-  function verdictMeta(verdict) {
-    return Constants.VERDICTS[verdict || "insufficient-data"] || Constants.VERDICTS["insufficient-data"];
-  }
-
   function historyText(item) {
     const event = item.history?.priceEvents?.[item.history.priceEvents.length - 1];
     if (!event) {
-      return "No change history yet.";
+      return t("noChangeHistoryYet");
     }
     if (event.type === "drop") {
-      return `Dropped from ${Utils.formatPrice(event.oldPrice, item.currency)} to ${Utils.formatPrice(event.newPrice, item.currency)}`;
+      return t("droppedFromTo", {
+        oldPrice: Utils.formatPrice(event.oldPrice, item.currency),
+        newPrice: Utils.formatPrice(event.newPrice, item.currency)
+      });
     }
     if (event.type === "increase") {
-      return `Increased from ${Utils.formatPrice(event.oldPrice, item.currency)} to ${Utils.formatPrice(event.newPrice, item.currency)}`;
+      return t("increasedFromTo", {
+        oldPrice: Utils.formatPrice(event.oldPrice, item.currency),
+        newPrice: Utils.formatPrice(event.newPrice, item.currency)
+      });
     }
     if (event.type === "unavailable") {
-      return "Listing currently unavailable.";
+      return t("listingCurrentlyUnavailable");
     }
-    return "Price unchanged.";
+    return t("priceUnchanged");
+  }
+
+  function getVerdictLabel(verdict) {
+    const keys = {
+      "great-deal": "greatDeal",
+      "good-price": "goodPrice",
+      "fair-price": "fairPrice",
+      "slightly-overpriced": "slightlyOverpriced",
+      "overpriced": "overpriced",
+      "insufficient-data": "noResult"
+    };
+    return t(keys[verdict] || "noResult");
+  }
+
+  function getConfidenceLabel(confidence) {
+    if (confidence === "high") return t("highConfidence");
+    if (confidence === "medium") return t("mediumConfidence");
+    return t("lowConfidence");
+  }
+
+  function getScoreBandLabel(label) {
+    return I18n ? I18n.translateScoreBandLabel(label) : label;
+  }
+
+  function buildCurrentSummary(listing, analysis) {
+    if (!listing?.price) {
+      return t("mainMsgCannotReadPrice");
+    }
+
+    if (analysis.deviationPercent === null || analysis.deviationPercent === undefined) {
+      return t("noResult");
+    }
+
+    const rounded = Math.abs(Math.round(analysis.deviationPercent));
+    if (analysis.isFallbackEstimate) {
+      return t("mainMsgFallback", {
+        percent: rounded,
+        direction: analysis.deviationPercent <= 0 ? t("below") : t("above")
+      });
+    }
+    if (analysis.deviationPercent <= -8) {
+      return t("mainMsgMuchCheaper", { percent: rounded });
+    }
+    if (analysis.deviationPercent < -3) {
+      return t("mainMsgBitCheaper");
+    }
+    if (analysis.deviationPercent <= 3) {
+      return t("mainMsgClose");
+    }
+    if (analysis.deviationPercent < 8) {
+      return t("mainMsgBitMoreExpensive");
+    }
+    return t("mainMsgMuchMoreExpensive", { percent: rounded });
+  }
+
+  function buildCurrentBullets(listing, analysis) {
+    const bullets = [];
+
+    if (analysis.marketBlockMessage) {
+      bullets.push(analysis.marketBlockMessage);
+      bullets.push(t("reasonTryRefresh"));
+      return bullets.slice(0, 3);
+    }
+
+    if (analysis.positiveSignals?.length) {
+      bullets.push(I18n.translateSignalLabel(analysis.positiveSignals[0].label));
+    }
+
+    if (analysis.riskFlags?.length) {
+      bullets.push(I18n.translateSignalLabel(analysis.riskFlags[0]));
+    }
+
+    if (analysis.comparableCount) {
+      bullets.push(`${analysis.comparableCount} ${t("comparables").toLowerCase()}`);
+    }
+
+    if (!bullets.length) {
+      bullets.push(buildCurrentSummary(listing, analysis));
+    }
+
+    return bullets.slice(0, 3);
   }
 
   function renderCurrentPage() {
@@ -84,8 +200,8 @@
     if (!context || !context.listing?.supported || !context.listing?.isListingPage) {
       dom.currentContent.innerHTML = `
         <div class="empty-state">
-          <h3>Open an Avto.net car listing</h3>
-          <p>The floating panel will do the main work automatically. The popup is here for a quick summary and saved cars.</p>
+          <h3>${Utils.escapeHtml(t("openAvtoNetListing"))}</h3>
+          <p>${Utils.escapeHtml(t("popupEmptyHint"))}</p>
         </div>
       `;
       return;
@@ -94,8 +210,8 @@
     if (!context.listing.available) {
       dom.currentContent.innerHTML = `
         <div class="empty-state">
-          <h3>Listing unavailable</h3>
-          <p>${Utils.escapeHtml(context.listing.summary || "This listing appears unavailable.")}</p>
+          <h3>${Utils.escapeHtml(t("listingUnavailableTitle"))}</h3>
+          <p>${Utils.escapeHtml(context.listing.summary || t("currentPageUnavailableFallback"))}</p>
         </div>
       `;
       return;
@@ -104,8 +220,8 @@
     if (!context.analysis) {
       dom.currentContent.innerHTML = `
         <div class="empty-state">
-          <h3>Analysis still loading</h3>
-          <p>The on-page panel will refresh automatically when enough listing content is available.</p>
+          <h3>${Utils.escapeHtml(t("analysisStillLoading"))}</h3>
+          <p>${Utils.escapeHtml(t("analysisLoadingHint"))}</p>
         </div>
       `;
       return;
@@ -114,44 +230,45 @@
     const listing = context.listing;
     const analysis = context.analysis;
     const verdict = verdictMeta(analysis.verdict);
+    const bullets = buildCurrentBullets(listing, analysis);
 
     dom.currentContent.innerHTML = `
       <article class="current-card">
         <div class="current-top">
           <div>
-            <div class="badge badge--${verdict.accent}">${Utils.escapeHtml(verdict.label)}</div>
+            <div class="badge badge--${verdict.accent}">${Utils.escapeHtml(getVerdictLabel(analysis.verdict))}</div>
             <h3>${Utils.escapeHtml(listing.title || "Avto.net listing")}</h3>
-            <p>${Utils.escapeHtml(analysis.summary)}</p>
+            <p>${Utils.escapeHtml(buildCurrentSummary(listing, analysis))}</p>
           </div>
           <div class="score-orb">
-            <span>Score</span>
+            <span>${Utils.escapeHtml(t("score"))}</span>
             <strong>${analysis.dealScore ?? "--"}</strong>
           </div>
         </div>
         <div class="stat-grid">
           <div class="stat-box">
-            <span>Listed</span>
+            <span>${Utils.escapeHtml(t("listed"))}</span>
             <strong>${Utils.escapeHtml(Utils.formatPrice(listing.price, listing.currency, popupState.settings.currencyFormat))}</strong>
           </div>
           <div class="stat-box">
-            <span>Fair estimate</span>
+            <span>${Utils.escapeHtml(t("fairEstimate"))}</span>
             <strong>${Utils.escapeHtml(Utils.formatPrice(analysis.fairPrice, listing.currency, popupState.settings.currencyFormat))}</strong>
           </div>
           <div class="stat-box">
-            <span>Confidence</span>
-            <strong>${Utils.escapeHtml(Constants.CONFIDENCE[analysis.confidence].label)}</strong>
+            <span>${Utils.escapeHtml(t("confidence"))}</span>
+            <strong>${Utils.escapeHtml(getConfidenceLabel(analysis.confidence))}</strong>
           </div>
           <div class="stat-box">
-            <span>Band</span>
-            <strong>${Utils.escapeHtml(analysis.scoreBandLabel || "Deal score")}</strong>
+            <span>${Utils.escapeHtml(t("band"))}</span>
+            <strong>${Utils.escapeHtml(getScoreBandLabel(analysis.scoreBandLabel || t("score")))}</strong>
           </div>
         </div>
         <ul class="mini-bullets">
-          ${(analysis.explanationBullets || []).slice(0, 3).map((bullet) => `<li>${Utils.escapeHtml(bullet)}</li>`).join("")}
+          ${bullets.map((bullet) => `<li>${Utils.escapeHtml(bullet)}</li>`).join("")}
         </ul>
         <div class="inline-actions">
-          <button class="primary-btn" type="button" id="save-current-btn">${context.savedItem ? "Saved" : "Save to watchlist"}</button>
-          <button class="ghost-btn" type="button" id="open-current-btn">Open listing</button>
+          <button class="primary-btn" type="button" id="save-current-btn">${Utils.escapeHtml(context.savedItem ? t("saved") : t("saveToWatchlist"))}</button>
+          <button class="ghost-btn" type="button" id="open-current-btn">${Utils.escapeHtml(t("openListingBtn"))}</button>
         </div>
       </article>
     `;
@@ -170,8 +287,8 @@
     if (!popupState.watchlist.length) {
       dom.watchlistContent.innerHTML = `
         <div class="empty-state">
-          <h3>No saved cars yet</h3>
-          <p>Save strong candidates from the floating panel, then monitor price drops and score changes here.</p>
+          <h3>${Utils.escapeHtml(t("noSavedCarsYet"))}</h3>
+          <p>${Utils.escapeHtml(t("noSavedCarsHint"))}</p>
         </div>
       `;
       return;
@@ -182,21 +299,21 @@
       return `
         <article class="watch-card" data-item-id="${Utils.escapeHtml(item.id)}">
           <div class="watch-media" style="${item.imageUrl ? `background-image:url('${Utils.escapeHtml(item.imageUrl)}')` : ""}">
-            <span class="badge badge--${verdict.accent}">${Utils.escapeHtml(verdict.shortLabel)}</span>
+            <span class="badge badge--${verdict.accent}">${Utils.escapeHtml(getVerdictLabel(item.analysis?.verdict || "insufficient-data"))}</span>
           </div>
           <div class="watch-copy">
             <h3>${Utils.escapeHtml(item.title)}</h3>
             <p>${Utils.escapeHtml(historyText(item))}</p>
             <div class="watch-meta">
               <span>${Utils.escapeHtml(Utils.formatPrice(item.currentPrice, item.currency, popupState.settings.currencyFormat))}</span>
-              <span>${item.analysis?.dealScore ?? "--"} score</span>
-              <span>${item.analysis?.scoreBandLabel || "Deal"}</span>
+              <span>${item.analysis?.dealScore ?? "--"} ${Utils.escapeHtml(t("score").toLowerCase())}</span>
+              <span>${Utils.escapeHtml(getScoreBandLabel(item.analysis?.scoreBandLabel || ""))}</span>
             </div>
           </div>
           <div class="watch-actions">
-            <button class="mini-btn" type="button" data-action="open">Open</button>
-            <button class="mini-btn" type="button" data-action="refresh">Refresh</button>
-            <button class="mini-btn mini-btn--danger" type="button" data-action="remove">Remove</button>
+            <button class="mini-btn" type="button" data-action="open">${Utils.escapeHtml(t("open"))}</button>
+            <button class="mini-btn" type="button" data-action="refresh">${Utils.escapeHtml(t("refresh"))}</button>
+            <button class="mini-btn mini-btn--danger" type="button" data-action="remove">${Utils.escapeHtml(t("remove"))}</button>
           </div>
         </article>
       `;
@@ -209,7 +326,7 @@
     }
 
     popupState.activeTab = await getActiveTab();
-    if (!popupState.activeTab?.id || !popupState.activeTab.url || !/avto\.net/i.test(popupState.activeTab.url)) {
+    if (!popupState.activeTab?.id || !popupState.activeTab.url || !/(avto\.net|mobile\.de)/i.test(popupState.activeTab.url)) {
       popupState.currentPage = null;
       renderCurrentPage();
       return;
@@ -233,7 +350,7 @@
       popupState.currentPage = response?.payload || null;
     } catch (error) {
       popupState.currentPage = null;
-      setStatus("The active tab is not ready for analysis yet.", true);
+      setStatus(t("activeTabNotReady"), true);
     }
 
     renderCurrentPage();
@@ -254,7 +371,11 @@
     });
 
     popupState.settings = Object.assign({}, Constants.DEFAULT_SETTINGS, response?.payload || {});
+    setLanguage(popupState.settings.language);
+    renderStaticText();
     syncSettingsControls();
+    renderCurrentPage();
+    renderWatchlist();
   }
 
   function syncSettingsControls() {
@@ -274,13 +395,16 @@
       payload: patch
     });
     popupState.settings = Object.assign({}, Constants.DEFAULT_SETTINGS, response?.payload || {});
+    setLanguage(popupState.settings.language);
     syncSettingsControls();
+    renderStaticText();
+    renderCurrentPage();
     renderWatchlist();
   }
 
   async function onSaveCurrent() {
     if (!popupState.currentPage?.listing || !popupState.currentPage?.analysis) {
-      setStatus("No current analysis to save.", true);
+      setStatus(t("noCurrentAnalysisToSave"), true);
       return;
     }
 
@@ -293,14 +417,14 @@
     });
 
     if (!response?.ok) {
-      setStatus(response?.error || "Save failed.", true);
+      setStatus(response?.error || t("saveFailed"), true);
       return;
     }
 
     popupState.currentPage.savedItem = response.payload.item;
     renderCurrentPage();
     await loadWatchlist();
-    setStatus(response.payload.existed ? "Listing updated in your watchlist." : "Listing saved to your watchlist.");
+    setStatus(response.payload.existed ? t("listingUpdatedInWatchlist") : t("listingSavedToWatchlist"));
   }
 
   async function onWatchlistAction(event) {
@@ -328,25 +452,25 @@
           payload: { itemId }
         });
         await loadWatchlist();
-        setStatus("Removed from watchlist.");
+        setStatus(t("removedFromWatchlist"));
       } else if (action === "refresh") {
-        setStatus("Refreshing saved listing...");
+        setStatus(t("refreshingSavedListing"));
         await runtimeSend({
           type: Constants.MESSAGE_TYPES.REFRESH_WATCHLIST_ITEM,
           payload: { itemId }
         });
         await loadWatchlist();
-        setStatus("Saved listing refreshed.");
+        setStatus(t("savedListingRefreshed"));
       }
     } catch (error) {
-      setStatus(error.message || "Action failed.", true);
+      setStatus(error.message || t("actionFailed"), true);
     } finally {
       button.disabled = false;
     }
   }
 
   async function refreshAllWatchlist() {
-    setStatus("Refreshing watchlist in the background...");
+    setStatus(t("refreshingWatchlist"));
     await runtimeSend({
       type: Constants.MESSAGE_TYPES.REFRESH_WATCHLIST_BATCH,
       payload: {
@@ -354,19 +478,19 @@
       }
     });
     await loadWatchlist();
-    setStatus("Watchlist refresh finished.");
+    setStatus(t("watchlistRefreshFinished"));
   }
 
   function attachEvents() {
     dom.refreshCurrentBtn.addEventListener("click", () => {
       loadCurrentPage(true).catch((error) => {
-        setStatus(error.message || "Refresh failed.", true);
+        setStatus(error.message || t("refreshFailed"), true);
       });
     });
 
     dom.refreshWatchlistBtn.addEventListener("click", () => {
       refreshAllWatchlist().catch((error) => {
-        setStatus(error.message || "Refresh failed.", true);
+        setStatus(error.message || t("refreshFailed"), true);
       });
     });
 
@@ -400,7 +524,10 @@
 
       if (changes[Constants.STORAGE_KEYS.SETTINGS]) {
         popupState.settings = Object.assign({}, Constants.DEFAULT_SETTINGS, changes[Constants.STORAGE_KEYS.SETTINGS].newValue || {});
+        setLanguage(popupState.settings.language);
         syncSettingsControls();
+        renderStaticText();
+        renderCurrentPage();
         renderWatchlist();
       }
     });
@@ -408,7 +535,6 @@
 
   async function init() {
     document.body.dataset.mode = dashboardMode ? "dashboard" : "popup";
-    dom.heroPill.textContent = dashboardMode ? "Dashboard" : "Panel-First";
 
     attachEvents();
     await Promise.all([
@@ -416,6 +542,9 @@
       loadWatchlist(),
       loadCurrentPage(false)
     ]);
+    renderStaticText();
+    renderCurrentPage();
+    renderWatchlist();
 
     if (popupState.settings.autoRefreshOnPopupOpen && popupState.watchlist.length) {
       refreshAllWatchlist().catch(() => {
@@ -425,6 +554,6 @@
   }
 
   init().catch((error) => {
-    setStatus(error.message || "Popup failed to initialize.", true);
+    setStatus(error.message || t("popupInitFailed"), true);
   });
 }(globalThis));

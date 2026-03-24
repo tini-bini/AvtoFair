@@ -1,4 +1,4 @@
-# AvtoFair
+# AutoFair
 
 Chrome extension for evaluating used-car listings on Avto.net and mobile.de.
 

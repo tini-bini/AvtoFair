@@ -3,6 +3,7 @@
   const { Constants, Utils, Storage } = root;
   const I18n = root.I18n;
   const t = (key) => I18n ? I18n.t(key) : key;
+  const tf = (key, vars) => I18n ? I18n.t(key, vars) : key;
 
   class FloatingPanel {
     constructor(options) {
@@ -123,6 +124,7 @@
     async setLanguage(lang) {
       if (I18n) I18n.setLang(lang);
       await Storage.updateSettings({ language: lang });
+      this.options.onAction("refresh");
       this.render();
     }
 
@@ -158,6 +160,11 @@
 
       if (action === "toggle-details") {
         this.toggleDetails().catch(() => {});
+        return;
+      }
+
+      if (action === "support") {
+        globalScope.open(Constants.SUPPORT_URL, "_blank", "noopener,noreferrer");
         return;
       }
 
@@ -352,8 +359,7 @@
     }
 
     getAvailableLangs() {
-      const site = this.model.listing?.site || Constants.SITES.AVTONET;
-      return site === Constants.SITES.MOBILEDE ? ["en", "sl", "de"] : ["en", "sl"];
+      return ["en", "sl"];
     }
 
     getVerdictMeta() {
@@ -363,11 +369,11 @@
 
     buildMainMessage(listing, analysis) {
       if (!listing?.price) {
-        return "AvtoFair could not read the asking price clearly from this page yet.";
+        return t("mainMsgCannotReadPrice");
       }
 
       if (analysis.marketBlockMessage && (analysis.deviationPercent === null || analysis.deviationPercent === undefined)) {
-        return "Avto.net blocked the market check right now. Try refreshing in a moment.";
+        return t("mainMsgMarketBlocked");
       }
 
       if (analysis.deviationPercent === null || analysis.deviationPercent === undefined) {
@@ -377,23 +383,23 @@
       if (analysis.isFallbackEstimate) {
         const rounded = Math.abs(Math.round(analysis.deviationPercent));
         const dir = analysis.deviationPercent <= 0 ? t("below") : t("above");
-        return `~${rounded}% ${dir} typical depreciation estimate. No live comparables yet.`;
+        return tf("mainMsgFallback", { percent: rounded, direction: dir });
       }
 
       const rounded = Math.abs(Math.round(analysis.deviationPercent));
       if (analysis.deviationPercent <= -8) {
-        return `This car looks around ${rounded}% cheaper than similar cars.`;
+        return tf("mainMsgMuchCheaper", { percent: rounded });
       }
       if (analysis.deviationPercent < -3) {
-        return `This car looks a bit cheaper than similar cars.`;
+        return t("mainMsgBitCheaper");
       }
       if (analysis.deviationPercent <= 3) {
-        return "This car is priced close to what similar cars usually cost.";
+        return t("mainMsgClose");
       }
       if (analysis.deviationPercent < 8) {
-        return `This car looks a little more expensive than similar cars.`;
+        return t("mainMsgBitMoreExpensive");
       }
-      return `This car looks around ${rounded}% more expensive than similar cars.`;
+      return tf("mainMsgMuchMoreExpensive", { percent: rounded });
     }
 
     buildDifferenceText(listing, analysis) {
@@ -419,27 +425,40 @@
       return `${prefix}${rounded}%`;
     }
 
-    getSimpleReasons(analysis) {
+    getSimpleReasons(analysis, listing) {
       if (analysis.marketBlockMessage) {
         return [
           analysis.marketBlockMessage,
-          "Try Refresh after the page has fully finished loading."
+          t("reasonTryRefresh")
         ];
       }
 
-      const reasons = (analysis.explanationBullets || []).slice(0, 3);
-      if (reasons.length) {
-        return reasons;
+      const reasons = [];
+
+      if (analysis.positiveSignals?.length) {
+        reasons.push(I18n ? I18n.translateSignalLabel(analysis.positiveSignals[0].label) : analysis.positiveSignals[0].label);
       }
 
-      return ["AvtoFair could not find enough simple reasons yet."];
+      if (analysis.riskFlags?.length) {
+        reasons.push(I18n ? I18n.translateSignalLabel(analysis.riskFlags[0]) : analysis.riskFlags[0]);
+      }
+
+      if (analysis.comparableCount) {
+        reasons.push(`${analysis.comparableCount} ${t("comparables").toLowerCase()}`);
+      }
+
+      if (!reasons.length) {
+        reasons.push(this.buildMainMessage(listing, analysis));
+      }
+
+      return reasons.slice(0, 3);
     }
 
     getHeaderSubtitle() {
       const listing = this.model.listing;
-      if (!listing) return "Price check";
+      if (!listing) return t("priceCheck");
       const parts = [listing.year, listing.make, listing.model].filter(Boolean);
-      return parts.length ? parts.join(" ") : "Price check";
+      return parts.length ? parts.join(" ") : t("priceCheck");
     }
 
     renderHeader() {
@@ -453,12 +472,15 @@
         <div class="avtofair-panel__header" data-avtofair-drag-handle="true">
           <div class="avtofair-panel__title-wrap">
             <div class="avtofair-panel__title-row">
-              <span class="avtofair-panel__title">AvtoFair</span>
+              <span class="avtofair-panel__title">AutoFair</span>
               <div class="avtofair-panel__lang">${langButtons}</div>
             </div>
             <div class="avtofair-panel__subtitle">${Utils.escapeHtml(this.getHeaderSubtitle())}</div>
           </div>
           <div class="avtofair-panel__header-actions">
+            <button type="button" class="avtofair-panel__support-btn" data-panel-action="support" title="${t("supportButton")}">
+              $
+            </button>
             <button type="button" data-panel-action="collapse" title="${this.collapsed ? t("expand") : t("minimize")}">
               ${this.collapsed
                 ? `<svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 4l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`
@@ -497,7 +519,7 @@
       const verdictMeta = this.getVerdictMeta();
       const verdictText = this.getVerdictText(analysis.verdict);
       const verdictShort = this.getVerdictShortText(analysis.verdict);
-      const reasons = this.getSimpleReasons(analysis);
+      const reasons = this.getSimpleReasons(analysis, listing);
       const isFallback = Boolean(analysis.isFallbackEstimate);
       const saveLabel = this.model.savedItem ? t("saved") : t("save");
       const estPrefix = isFallback ? "~" : "";
@@ -561,7 +583,7 @@
                 <div class="avtofair-panel__signal-box">
                   <div class="avtofair-panel__signal-title">${t("goodSigns")}</div>
                   <div class="avtofair-panel__chips">
-                    ${(analysis.positiveSignals || []).slice(0, 5).map((signal) => `<span class="avtofair-panel__chip avtofair-panel__chip--good">${Utils.escapeHtml(signal.label)}</span>`).join("")}
+                    ${(analysis.positiveSignals || []).slice(0, 5).map((signal) => `<span class="avtofair-panel__chip avtofair-panel__chip--good">${Utils.escapeHtml(I18n ? I18n.translateSignalLabel(signal.label) : signal.label)}</span>`).join("")}
                   </div>
                 </div>
               ` : ""}
@@ -570,7 +592,7 @@
                 <div class="avtofair-panel__signal-box">
                   <div class="avtofair-panel__signal-title">${t("watchOut")}</div>
                   <div class="avtofair-panel__chips">
-                    ${(analysis.riskFlags || []).slice(0, 5).map((signal) => `<span class="avtofair-panel__chip avtofair-panel__chip--bad">${Utils.escapeHtml(signal)}</span>`).join("")}
+                    ${(analysis.riskFlags || []).slice(0, 5).map((signal) => `<span class="avtofair-panel__chip avtofair-panel__chip--bad">${Utils.escapeHtml(I18n ? I18n.translateSignalLabel(signal) : signal)}</span>`).join("")}
                   </div>
                 </div>
               ` : ""}

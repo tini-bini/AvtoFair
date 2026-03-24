@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "AvtoFair",
+  "name": "AutoFair",
   "version": "0.2.0",
   "description": "Know if the price is fair before you buy. Price analysis for Avto.net and mobile.de by FlegarTech.",
   "permissions": [
@@ -19,7 +19,7 @@
     "service_worker": "service-worker.js"
   },
   "action": {
-    "default_title": "AvtoFair",
+    "default_title": "AutoFair",
     "default_popup": "popup.html"
   },
   "content_scripts": [

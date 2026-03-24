@@ -1,5 +1,6 @@
 importScripts(
   "lib/constants.js",
+  "lib/i18n.js",
   "lib/utils.js",
   "lib/storage.js",
   "lib/notifications.js"
@@ -127,7 +128,7 @@ importScripts(
 
       const settings = await Storage.getSettings();
       if (settings.notificationsEnabled && Notifications.shouldNotifyPriceDrop(updatedItem, previousPrice, nextPrice)) {
-        await Notifications.createPriceDropNotification(updatedItem, previousPrice, nextPrice);
+        await Notifications.createPriceDropNotification(updatedItem, previousPrice, nextPrice, settings.language);
         await Storage.updateNotificationState(updatedItem.id, {
           lastNotifiedPriceDropTo: nextPrice
         });
