@@ -1,0 +1,22 @@
+<svg width="128" height="128" viewBox="0 0 128 128" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="128" height="128" rx="28" fill="url(#bg)"/>
+  <rect x="10" y="10" width="108" height="108" rx="22" stroke="rgba(255,255,255,0.12)"/>
+  <path d="M30 73C31.6 64.8 38.1 57.9 46.4 55.8L58.1 52.8C61.9 51.9 66 51.9 69.9 52.8L81.6 55.8C89.9 57.9 96.4 64.8 98 73L99.2 79.1C99.6 81.1 98.1 83 96 83H92.8C91.1 83 89.7 81.8 89.3 80.2L88.7 77.9H39.3L38.7 80.2C38.3 81.8 36.9 83 35.2 83H32C29.9 83 28.4 81.1 28.8 79.1L30 73Z" fill="url(#car)"/>
+  <path d="M44.5 61.8L56.5 58.9C61.4 57.7 66.6 57.7 71.5 58.9L83.5 61.8C86.2 62.5 88.4 64.3 89.6 66.8L91.3 70.2H36.7L38.4 66.8C39.6 64.3 41.8 62.5 44.5 61.8Z" fill="#EFF7FF"/>
+  <circle cx="45.5" cy="81.5" r="7.5" fill="#09111E"/>
+  <circle cx="82.5" cy="81.5" r="7.5" fill="#09111E"/>
+  <circle cx="45.5" cy="81.5" r="3.5" fill="#8CF2CF"/>
+  <circle cx="82.5" cy="81.5" r="3.5" fill="#8CF2CF"/>
+  <path d="M63.9 28L81 45.1L74.2 51.9L67.8 45.5L58.2 55.1L51.4 48.3L63.9 35.8H46V28H63.9Z" fill="#8CF2CF"/>
+  <defs>
+    <linearGradient id="bg" x1="16" y1="12" x2="111" y2="116" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#08111F"/>
+      <stop offset="0.56" stop-color="#12304A"/>
+      <stop offset="1" stop-color="#14A87B"/>
+    </linearGradient>
+    <linearGradient id="car" x1="35" y1="55" x2="92" y2="86" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFFFFF"/>
+      <stop offset="1" stop-color="#D7E6F8"/>
+    </linearGradient>
+  </defs>
+</svg>
