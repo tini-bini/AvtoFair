@@ -173,6 +173,11 @@
         return;
       }
 
+      if (action === "toggle-theme") {
+        this.toggleTheme().catch(() => {});
+        return;
+      }
+
       if (action.startsWith("lang-")) {
         const lang = action.slice(5);
         this.setLanguage(lang).catch(() => {});
@@ -461,12 +466,31 @@
       return parts.length ? parts.join(" ") : t("priceCheck");
     }
 
+    getThemeIcon(theme) {
+      if (theme === "light") {
+        return `<svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M10 6.5A4.5 4.5 0 015.5 2 4.5 4.5 0 106 11a4.5 4.5 0 004-4.5z"/></svg>`;
+      }
+      return `<svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="6" cy="6" r="2"/><line x1="6" y1="0.5" x2="6" y2="2"/><line x1="6" y1="10" x2="6" y2="11.5"/><line x1="0.5" y1="6" x2="2" y2="6"/><line x1="10" y1="6" x2="11.5" y2="6"/><line x1="2.2" y1="2.2" x2="3.2" y2="3.2"/><line x1="8.8" y1="8.8" x2="9.8" y2="9.8"/><line x1="9.8" y1="2.2" x2="8.8" y2="3.2"/><line x1="3.2" y1="8.8" x2="2.2" y2="9.8"/></svg>`;
+    }
+
+    getThemeMode() {
+      return this.settings.themeMode === "light" ? "light" : "dark";
+    }
+
+    async toggleTheme() {
+      const next = this.getThemeMode() === "light" ? "dark" : "light";
+      this.settings = Object.assign({}, this.settings, { themeMode: next });
+      await Storage.updateSettings({ themeMode: next });
+      this.render();
+    }
+
     renderHeader() {
       const currentLang = I18n ? I18n.getLang() : "en";
       const availableLangs = this.getAvailableLangs();
       const langButtons = availableLangs.map((lang) =>
         `<button type="button" class="avtofair-panel__lang-btn${lang === currentLang ? " is-active" : ""}" data-panel-action="lang-${lang}">${lang.toUpperCase()}</button>`
       ).join("");
+      const theme = this.getThemeMode();
 
       return `
         <div class="avtofair-panel__header" data-avtofair-drag-handle="true">
@@ -480,6 +504,9 @@
           <div class="avtofair-panel__header-actions">
             <button type="button" class="avtofair-panel__support-btn" data-panel-action="support" title="${t("supportButton")}">
               $
+            </button>
+            <button type="button" class="avtofair-panel__theme-btn" data-panel-action="toggle-theme" title="${theme === "light" ? "Dark mode" : "Light mode"}">
+              ${this.getThemeIcon(theme)}
             </button>
             <button type="button" data-panel-action="collapse" title="${this.collapsed ? t("expand") : t("minimize")}">
               ${this.collapsed
@@ -650,6 +677,7 @@
       this.root.dataset.collapsed = this.collapsed ? "true" : "false";
       this.root.dataset.state = this.model.status || "idle";
       this.root.dataset.compact = this.settings.compactMode ? "true" : "false";
+      this.root.dataset.theme = this.getThemeMode();
 
       if (this.model.status === "ready" && this.model.analysis && this.model.listing) {
         this.root.innerHTML = this.renderReady();

@@ -13,6 +13,9 @@
     statusBar: document.getElementById("status-bar"),
     supportBtn: document.getElementById("support-btn"),
     heroPill: document.getElementById("hero-pill"),
+    themeToggleBtn: document.getElementById("theme-toggle-btn"),
+    themeIconSun: document.getElementById("theme-icon-sun"),
+    themeIconMoon: document.getElementById("theme-icon-moon"),
     showPanel: document.getElementById("setting-show-panel"),
     autoRun: document.getElementById("setting-auto-run"),
     notifications: document.getElementById("setting-notifications"),
@@ -39,6 +42,10 @@
     if (I18n) {
       I18n.setLang(lang || "en");
     }
+  }
+
+  function normalizeTheme(theme) {
+    return theme === "light" ? "light" : "dark";
   }
 
   function renderStaticText() {
@@ -87,7 +94,8 @@
   }
 
   function historyText(item) {
-    const event = item.history?.priceEvents?.[item.history.priceEvents.length - 1];
+    const priceEvents = Array.isArray(item.history?.priceEvents) ? item.history.priceEvents : [];
+    const event = priceEvents[priceEvents.length - 1];
     if (!event) {
       return t("noChangeHistoryYet");
     }
@@ -119,6 +127,10 @@
       "insufficient-data": "noResult"
     };
     return t(keys[verdict] || "noResult");
+  }
+
+  function verdictMeta(verdict) {
+    return Constants.VERDICTS[verdict] || Constants.VERDICTS["insufficient-data"];
   }
 
   function getConfidenceLabel(confidence) {
@@ -378,6 +390,18 @@
     renderWatchlist();
   }
 
+  function applyTheme(theme) {
+    const nextTheme = normalizeTheme(theme);
+    document.body.dataset.theme = nextTheme;
+    if (dom.themeIconSun) dom.themeIconSun.style.display = nextTheme === "light" ? "" : "none";
+    if (dom.themeIconMoon) dom.themeIconMoon.style.display = nextTheme === "light" ? "none" : "";
+    if (dom.themeToggleBtn) {
+      const nextLabel = nextTheme === "light" ? "Dark mode" : "Light mode";
+      dom.themeToggleBtn.title = nextLabel;
+      dom.themeToggleBtn.setAttribute("aria-label", nextLabel);
+    }
+  }
+
   function syncSettingsControls() {
     dom.showPanel.checked = popupState.settings.showFloatingPanel;
     dom.autoRun.checked = popupState.settings.autoRunAnalysis;
@@ -387,6 +411,7 @@
     dom.rememberPosition.checked = popupState.settings.rememberPanelPosition;
     dom.autoRefresh.checked = popupState.settings.autoRefreshOnPopupOpen;
     dom.density.value = popupState.settings.watchlistDensity;
+    applyTheme(normalizeTheme(popupState.settings.themeMode));
   }
 
   async function updateSetting(patch) {
@@ -511,6 +536,11 @@
     dom.rememberPosition.addEventListener("change", () => updateSetting({ rememberPanelPosition: dom.rememberPosition.checked }).catch((error) => setStatus(error.message, true)));
     dom.autoRefresh.addEventListener("change", () => updateSetting({ autoRefreshOnPopupOpen: dom.autoRefresh.checked }).catch((error) => setStatus(error.message, true)));
     dom.density.addEventListener("change", () => updateSetting({ watchlistDensity: dom.density.value }).catch((error) => setStatus(error.message, true)));
+
+    dom.themeToggleBtn?.addEventListener("click", () => {
+      const next = normalizeTheme(popupState.settings.themeMode) === "light" ? "dark" : "light";
+      updateSetting({ themeMode: next }).catch((error) => setStatus(error.message, true));
+    });
 
     chrome.storage.onChanged.addListener((changes, areaName) => {
       if (areaName !== "local") {
