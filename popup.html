@@ -4,111 +4,192 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>AutoFair</title>
-    <link rel="stylesheet" href="styles/popup.css">
+    <link rel="stylesheet" href="styles.css">
   </head>
   <body>
-    <div class="popup-shell">
-      <header class="hero-card">
-        <div class="hero-brand">
-          <img src="assets/logo.svg" alt="AutoFair logo" class="hero-logo">
-          <div>
-            <div class="eyebrow">FlegarTech</div>
-            <h1>AutoFair</h1>
+    <div class="popup-app">
+      <div class="ambient ambient--one" aria-hidden="true"></div>
+      <div class="ambient ambient--two" aria-hidden="true"></div>
+
+      <header class="glass topbar">
+        <div class="brand-lockup">
+          <div class="brand-mark">
+            <img src="assets/logo-3d.png" alt="AutoFair logo" class="brand-logo">
+          </div>
+          <div class="brand-copy">
+            <div class="brand-kicker">FlegarTech</div>
+            <div class="brand-heading">
+              <h1>AutoFair</h1>
+              <div class="mode-pill" id="hero-pill">Panel-First</div>
+            </div>
             <p id="hero-subtitle">Know if the price is fair before you buy.</p>
           </div>
         </div>
-        <div class="hero-right">
-          <button class="theme-toggle-btn" id="theme-toggle-btn" type="button" title="Toggle theme" aria-label="Toggle dark/light mode">
-            <svg id="theme-icon-sun" width="14" height="14" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" style="display:none"><circle cx="6" cy="6" r="2"/><line x1="6" y1="0.5" x2="6" y2="2"/><line x1="6" y1="10" x2="6" y2="11.5"/><line x1="0.5" y1="6" x2="2" y2="6"/><line x1="10" y1="6" x2="11.5" y2="6"/><line x1="2.2" y1="2.2" x2="3.2" y2="3.2"/><line x1="8.8" y1="8.8" x2="9.8" y2="9.8"/><line x1="9.8" y1="2.2" x2="8.8" y2="3.2"/><line x1="3.2" y1="8.8" x2="2.2" y2="9.8"/></svg>
-            <svg id="theme-icon-moon" width="14" height="14" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M10 6.5A4.5 4.5 0 015.5 2 4.5 4.5 0 106 11a4.5 4.5 0 004-4.5z"/></svg>
-          </button>
-          <div class="hero-pill" id="hero-pill">Panel-First</div>
-        </div>
+        <button class="icon-button" id="theme-toggle-btn" type="button" title="Toggle theme" aria-label="Toggle dark/light mode">
+          <svg id="theme-icon-sun" width="16" height="16" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" style="display:none">
+            <circle cx="6" cy="6" r="2.2"></circle>
+            <line x1="6" y1="0.9" x2="6" y2="2"></line>
+            <line x1="6" y1="10" x2="6" y2="11.1"></line>
+            <line x1="0.9" y1="6" x2="2" y2="6"></line>
+            <line x1="10" y1="6" x2="11.1" y2="6"></line>
+            <line x1="2.35" y1="2.35" x2="3.15" y2="3.15"></line>
+            <line x1="8.85" y1="8.85" x2="9.65" y2="9.65"></line>
+            <line x1="9.65" y1="2.35" x2="8.85" y2="3.15"></line>
+            <line x1="3.15" y1="8.85" x2="2.35" y2="9.65"></line>
+          </svg>
+          <svg id="theme-icon-moon" width="16" height="16" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round">
+            <path d="M10 6.4A4.4 4.4 0 0 1 5.6 2a4.5 4.5 0 1 0 .4 9A4.4 4.4 0 0 0 10 6.4Z"></path>
+          </svg>
+        </button>
       </header>
 
-      <div class="dashboard-grid">
-        <section class="panel" id="current-panel">
-          <div class="section-head">
-            <div>
-              <div class="eyebrow" id="current-page-eyebrow">Current Page</div>
-              <h2 id="listing-summary-title">Listing summary</h2>
-            </div>
-            <button class="icon-btn" id="refresh-current-btn" type="button">Refresh</button>
-          </div>
-          <div id="current-content" class="panel-body"></div>
+      <main class="content-stack">
+        <section class="glass metrics-strip" aria-label="Overview">
+          <article class="metric-card">
+            <span class="metric-label">Saved</span>
+            <strong class="metric-value" id="metric-watchlist-count">0</strong>
+          </article>
+          <article class="metric-card">
+            <span class="metric-label">Theme</span>
+            <strong class="metric-value" id="metric-theme-mode">Dark</strong>
+          </article>
+          <article class="metric-card">
+            <span class="metric-label">Refresh</span>
+            <strong class="metric-value" id="metric-refresh-mode">Manual</strong>
+          </article>
         </section>
 
-        <section class="panel">
+        <section class="glass section-card" id="current-panel">
           <div class="section-head">
             <div>
-              <div class="eyebrow" id="watchlist-eyebrow">Watchlist</div>
+              <div class="section-kicker" id="current-page-eyebrow">Current Page</div>
+              <h2 id="listing-summary-title">Listing summary</h2>
+            </div>
+            <button class="secondary-button" id="refresh-current-btn" type="button">Refresh</button>
+          </div>
+          <div id="current-content" class="section-content"></div>
+        </section>
+
+        <section class="glass section-card">
+          <div class="section-head">
+            <div>
+              <div class="section-kicker" id="watchlist-eyebrow">Watchlist</div>
               <h2 id="saved-cars-title">Saved cars</h2>
             </div>
-            <button class="icon-btn" id="refresh-watchlist-btn" type="button">Refresh all</button>
+            <div class="section-actions">
+              <button class="secondary-button" id="open-dashboard-btn" type="button">Dashboard</button>
+              <button class="secondary-button" id="refresh-watchlist-btn" type="button">Refresh all</button>
+            </div>
           </div>
           <div id="watchlist-content" class="watchlist-list"></div>
         </section>
-      </div>
 
-      <section class="panel panel--settings">
-        <div class="section-head">
-          <div>
-              <div class="eyebrow" id="settings-eyebrow">Settings</div>
+        <section class="glass section-card section-card--settings">
+          <div class="section-head">
+            <div>
+              <div class="section-kicker" id="settings-eyebrow">Settings</div>
               <h2 id="extension-controls-title">Extension controls</h2>
             </div>
           </div>
-        <div class="settings-grid">
-          <label class="setting-row">
-            <span id="label-show-panel">Show floating panel</span>
-            <input type="checkbox" id="setting-show-panel">
-          </label>
-          <label class="setting-row">
-            <span id="label-auto-run">Auto-run analysis on page load</span>
-            <input type="checkbox" id="setting-auto-run">
-          </label>
-          <label class="setting-row">
-            <span id="label-notifications">Price-drop notifications</span>
-            <input type="checkbox" id="setting-notifications">
-          </label>
-          <label class="setting-row">
-            <span id="label-default-collapsed">Default collapsed panel</span>
-            <input type="checkbox" id="setting-default-collapsed">
-          </label>
-          <label class="setting-row">
-            <span id="label-compact-panel">Compact panel mode</span>
-            <input type="checkbox" id="setting-compact-panel">
-          </label>
-          <label class="setting-row">
-            <span id="label-remember-position">Remember panel position</span>
-            <input type="checkbox" id="setting-remember-position">
-          </label>
-          <label class="setting-row">
-            <span id="label-auto-refresh">Refresh saved items on popup open</span>
-            <input type="checkbox" id="setting-auto-refresh">
-          </label>
-          <label class="setting-row">
-            <span id="label-density">Watchlist density</span>
-            <select id="setting-density">
-              <option value="detailed" id="density-detailed">Detailed</option>
-              <option value="compact" id="density-compact">Compact</option>
-            </select>
-          </label>
-        </div>
-      </section>
 
-      <footer class="footer-card">
-        <div>
-          <strong id="built-by">Built by FlegarTech</strong>
-          <p id="support-text">If AutoFair saved you money, consider supporting development.</p>
-        </div>
-        <button class="support-btn" id="support-btn" type="button">Support AutoFair</button>
-      </footer>
-      <div id="status-bar" class="status-bar" aria-live="polite"></div>
+          <div class="settings-grid">
+            <div class="setting-row">
+              <label class="setting-copy" for="setting-show-panel">
+                <span id="label-show-panel">Show floating panel</span>
+              </label>
+              <label class="switch">
+                <input type="checkbox" id="setting-show-panel">
+                <span class="switch-ui"></span>
+              </label>
+            </div>
+
+            <div class="setting-row">
+              <label class="setting-copy" for="setting-auto-run">
+                <span id="label-auto-run">Auto-run analysis on page load</span>
+              </label>
+              <label class="switch">
+                <input type="checkbox" id="setting-auto-run">
+                <span class="switch-ui"></span>
+              </label>
+            </div>
+
+            <div class="setting-row">
+              <label class="setting-copy" for="setting-notifications">
+                <span id="label-notifications">Price-drop notifications</span>
+              </label>
+              <label class="switch">
+                <input type="checkbox" id="setting-notifications">
+                <span class="switch-ui"></span>
+              </label>
+            </div>
+
+            <div class="setting-row">
+              <label class="setting-copy" for="setting-default-collapsed">
+                <span id="label-default-collapsed">Default collapsed panel</span>
+              </label>
+              <label class="switch">
+                <input type="checkbox" id="setting-default-collapsed">
+                <span class="switch-ui"></span>
+              </label>
+            </div>
+
+            <div class="setting-row">
+              <label class="setting-copy" for="setting-compact-panel">
+                <span id="label-compact-panel">Compact panel mode</span>
+              </label>
+              <label class="switch">
+                <input type="checkbox" id="setting-compact-panel">
+                <span class="switch-ui"></span>
+              </label>
+            </div>
+
+            <div class="setting-row">
+              <label class="setting-copy" for="setting-remember-position">
+                <span id="label-remember-position">Remember panel position</span>
+              </label>
+              <label class="switch">
+                <input type="checkbox" id="setting-remember-position">
+                <span class="switch-ui"></span>
+              </label>
+            </div>
+
+            <div class="setting-row">
+              <label class="setting-copy" for="setting-auto-refresh">
+                <span id="label-auto-refresh">Refresh saved items on popup open</span>
+              </label>
+              <label class="switch">
+                <input type="checkbox" id="setting-auto-refresh">
+                <span class="switch-ui"></span>
+              </label>
+            </div>
+
+            <div class="setting-row">
+              <label class="setting-copy" for="setting-density">
+                <span id="label-density">Watchlist density</span>
+              </label>
+              <select id="setting-density" class="glass-select">
+                <option value="detailed" id="density-detailed">Detailed</option>
+                <option value="compact" id="density-compact">Compact</option>
+              </select>
+            </div>
+          </div>
+        </section>
+
+        <footer class="glass footer-card">
+          <div class="footer-copy">
+            <strong id="built-by">Built by FlegarTech</strong>
+            <p id="support-text">If AutoFair saved you money, consider supporting development.</p>
+          </div>
+          <button class="primary-button" id="support-btn" type="button">Support AutoFair</button>
+        </footer>
+
+        <div id="status-bar" class="status-bar" aria-live="polite"></div>
+      </main>
     </div>
 
     <script src="lib/constants.js"></script>
     <script src="lib/i18n.js"></script>
     <script src="lib/utils.js"></script>
-    <script src="popup.js"></script>
+    <script src="script.js"></script>
   </body>
 </html>
