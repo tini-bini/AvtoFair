@@ -148,28 +148,57 @@ importScripts(
     );
   }
 
-  async function refreshBatch(limit, reason) {
-    const watchlist = await Storage.getWatchlist();
-    const slice = watchlist.slice(0, limit || watchlist.length);
-    const results = [];
+  async function mapWithConcurrency(items, limit, iteratee) {
+    const source = Array.isArray(items) ? items : [];
+    const concurrency = Math.max(1, Math.min(limit || 1, source.length || 1));
+    const results = new Array(source.length);
+    let cursor = 0;
 
-    for (const item of slice) {
-      try {
-        const refreshed = await refreshWatchlistItem(item.id, reason || "batch");
-        results.push({
-          ok: true,
-          item: refreshed
-        });
-      } catch (error) {
-        results.push({
-          ok: false,
-          itemId: item.id,
-          error: error.message
-        });
+    async function worker() {
+      while (cursor < source.length) {
+        const currentIndex = cursor;
+        cursor += 1;
+        results[currentIndex] = await iteratee(source[currentIndex], currentIndex);
       }
     }
 
+    await Promise.all(Array.from({ length: concurrency }, () => worker()));
     return results;
+  }
+
+  async function refreshBatch(limit, reason, strategy) {
+    const watchlist = await Storage.getWatchlist();
+    const selected = strategy === "stale"
+      ? watchlist.filter((item) => Storage.isStaleWatchlistItem(item))
+      : watchlist;
+    const prioritized = selected
+      .slice()
+      .sort((left, right) => (left?.history?.lastChecked || 0) - (right?.history?.lastChecked || 0));
+    const slice = prioritized.slice(0, limit || prioritized.length);
+    const results = await mapWithConcurrency(slice, 2, async (item) => {
+      try {
+        const refreshed = await refreshWatchlistItem(item.id, reason || "batch");
+        return {
+          ok: true,
+          item: refreshed
+        };
+      } catch (error) {
+        return {
+          ok: false,
+          itemId: item.id,
+          error: error.message
+        };
+      }
+    });
+
+    return {
+      items: results,
+      summary: {
+        total: results.length,
+        ok: results.filter((result) => result.ok).length,
+        failed: results.filter((result) => !result.ok).length
+      }
+    };
   }
 
   function openDashboardTab() {
@@ -182,11 +211,17 @@ importScripts(
   }
 
   chrome.runtime.onInstalled.addListener(() => {
-    Storage.ensureDefaults().then(ensureAlarm);
+    Storage.ensureDefaults()
+      .then(Storage.runCloudSync)
+      .catch(() => {})
+      .then(ensureAlarm);
   });
 
   chrome.runtime.onStartup.addListener(() => {
-    Storage.ensureDefaults().then(ensureAlarm);
+    Storage.ensureDefaults()
+      .then(Storage.runCloudSync)
+      .catch(() => {})
+      .then(ensureAlarm);
   });
 
   chrome.alarms.onAlarm.addListener((alarm) => {
@@ -194,9 +229,11 @@ importScripts(
       return;
     }
 
-    refreshBatch(3, "scheduled").catch(() => {
+    refreshBatch(3, "scheduled", "stale")
+      .then(() => Storage.runCloudSync().catch(() => {}))
+      .catch(() => {
       // Silent background failure is acceptable for the MVP.
-    });
+      });
   });
 
   chrome.notifications.onClicked.addListener(async (notificationId) => {
@@ -228,6 +265,11 @@ importScripts(
 
       if (message && message.type === Constants.MESSAGE_TYPES.UPDATE_SETTINGS) {
         const settings = await Storage.updateSettings(message.payload || {});
+        if (!settings.cloudSyncEnabled) {
+          await Storage.clearCloudSync().catch(() => {});
+        } else {
+          await Storage.runCloudSync().catch(() => {});
+        }
         await ensureAlarm();
         sendResponse({
           ok: true,
@@ -238,6 +280,7 @@ importScripts(
 
       if (message && message.type === Constants.MESSAGE_TYPES.SAVE_ANALYSIS) {
         const saved = await Storage.saveAnalysis(message.payload, sender.tab ? "current-page" : "popup");
+        await Storage.runCloudSync().catch(() => {});
         sendResponse({
           ok: true,
           payload: saved
@@ -248,6 +291,7 @@ importScripts(
       if (message && message.type === Constants.MESSAGE_TYPES.REMOVE_WATCHLIST_ITEM) {
         const itemId = message.payload ? message.payload.itemId : null;
         const next = await Storage.removeWatchlistItem(itemId);
+        await Storage.runCloudSync().catch(() => {});
         sendResponse({
           ok: true,
           payload: next
@@ -258,6 +302,7 @@ importScripts(
       if (message && message.type === Constants.MESSAGE_TYPES.REFRESH_WATCHLIST_ITEM) {
         const itemId = message.payload ? message.payload.itemId : null;
         const item = await refreshWatchlistItem(itemId, "manual");
+        await Storage.runCloudSync().catch(() => {});
         sendResponse({
           ok: true,
           payload: item
@@ -267,10 +312,61 @@ importScripts(
 
       if (message && message.type === Constants.MESSAGE_TYPES.REFRESH_WATCHLIST_BATCH) {
         const limit = message.payload ? message.payload.limit : null;
-        const results = await refreshBatch(limit, "popup-batch");
+        const strategy = message.payload ? message.payload.strategy : null;
+        const results = await refreshBatch(limit, "popup-batch", strategy);
+        await Storage.runCloudSync().catch(() => {});
         sendResponse({
           ok: true,
           payload: results
+        });
+        return;
+      }
+
+      if (message && message.type === Constants.MESSAGE_TYPES.REFRESH_WATCHLIST_STALE) {
+        const limit = message.payload ? message.payload.limit : null;
+        const results = await refreshBatch(limit, "popup-stale", "stale");
+        await Storage.runCloudSync().catch(() => {});
+        sendResponse({
+          ok: true,
+          payload: results
+        });
+        return;
+      }
+
+      if (message && message.type === Constants.MESSAGE_TYPES.EXPORT_BACKUP) {
+        sendResponse({
+          ok: true,
+          payload: await Storage.exportBackupData()
+        });
+        return;
+      }
+
+      if (message && message.type === Constants.MESSAGE_TYPES.IMPORT_BACKUP) {
+        const payload = message.payload || {};
+        const result = await Storage.importBackupData(payload.data, payload.mode || "merge");
+        if ((await Storage.getSettings()).cloudSyncEnabled) {
+          await Storage.runCloudSync().catch(() => {});
+        }
+        sendResponse({
+          ok: true,
+          payload: result
+        });
+        return;
+      }
+
+      if (message && message.type === Constants.MESSAGE_TYPES.GET_SYNC_STATUS) {
+        sendResponse({
+          ok: true,
+          payload: await Storage.getSyncStatus()
+        });
+        return;
+      }
+
+      if (message && message.type === Constants.MESSAGE_TYPES.RUN_CLOUD_SYNC) {
+        const result = await Storage.runCloudSync();
+        sendResponse({
+          ok: true,
+          payload: result
         });
         return;
       }

@@ -177,6 +177,11 @@ body.avtofair-no-select * {
   transition: background 0.1s, color 0.1s;
 }
 
+.avtofair-panel__header-actions button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
 .avtofair-panel[data-theme="light"] .avtofair-panel__header-actions button {
   background: rgba(0, 0, 0, 0.06);
 }
@@ -382,6 +387,33 @@ body.avtofair-no-select * {
   margin-top: 10px;
 }
 
+.avtofair-panel__microstats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.avtofair-panel__microstat,
+.avtofair-panel__hint {
+  color: var(--avf-muted);
+  font-size: 0.76rem;
+}
+
+.avtofair-panel__microstat {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 0 10px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--avf-border);
+}
+
+.avtofair-panel[data-theme="light"] .avtofair-panel__microstat {
+  background: rgba(0, 0, 0, 0.03);
+}
+
 .avtofair-panel__field,
 .avtofair-panel__details,
 .avtofair-panel__signal-box,
@@ -414,6 +446,11 @@ body.avtofair-no-select * {
 .avtofair-panel__state {
   margin-top: 10px;
   padding: 12px;
+}
+
+.avtofair-panel__hint {
+  margin-top: 12px;
+  line-height: 1.4;
 }
 
 .avtofair-panel__signal-title {

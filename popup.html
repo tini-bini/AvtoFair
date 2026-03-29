@@ -46,16 +46,20 @@
       <main class="content-stack">
         <section class="glass metrics-strip" aria-label="Overview">
           <article class="metric-card">
-            <span class="metric-label">Saved</span>
+            <span class="metric-label" id="metric-label-saved">Saved</span>
             <strong class="metric-value" id="metric-watchlist-count">0</strong>
           </article>
           <article class="metric-card">
-            <span class="metric-label">Theme</span>
-            <strong class="metric-value" id="metric-theme-mode">Dark</strong>
+            <span class="metric-label" id="metric-label-deals">Deals</span>
+            <strong class="metric-value" id="metric-deal-count">0</strong>
           </article>
           <article class="metric-card">
-            <span class="metric-label">Refresh</span>
-            <strong class="metric-value" id="metric-refresh-mode">Manual</strong>
+            <span class="metric-label" id="metric-label-drops">Drops</span>
+            <strong class="metric-value" id="metric-drop-count">0</strong>
+          </article>
+          <article class="metric-card">
+            <span class="metric-label" id="metric-label-attention">Attention</span>
+            <strong class="metric-value" id="metric-attention-count">0</strong>
           </article>
         </section>
 
@@ -78,8 +82,38 @@
             </div>
             <div class="section-actions">
               <button class="secondary-button" id="open-dashboard-btn" type="button">Dashboard</button>
+              <button class="secondary-button" id="refresh-stale-btn" type="button">Refresh stale</button>
               <button class="secondary-button" id="refresh-watchlist-btn" type="button">Refresh all</button>
             </div>
+          </div>
+          <div class="watchlist-toolbar">
+            <label class="search-field" for="watchlist-search">
+              <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                <circle cx="7" cy="7" r="4.5" stroke="currentColor" stroke-width="1.5"></circle>
+                <path d="M10.5 10.5L14 14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"></path>
+              </svg>
+              <input id="watchlist-search" class="search-input" type="search" placeholder="Search saved cars">
+            </label>
+            <div class="watchlist-toolbar__controls">
+              <select id="watchlist-filter" class="glass-select">
+                <option value="all" id="filter-all">All saved</option>
+                <option value="deals" id="filter-deals">Good deals</option>
+                <option value="drops" id="filter-drops">Price drops</option>
+                <option value="attention" id="filter-attention">Need attention</option>
+              </select>
+              <select id="watchlist-sort" class="glass-select">
+                <option value="recommended" id="sort-recommended">Recommended</option>
+                <option value="score-desc" id="sort-score">Best score</option>
+                <option value="recent-check" id="sort-recent">Recently checked</option>
+                <option value="biggest-drop" id="sort-drop">Biggest drop</option>
+                <option value="highest-risk" id="sort-risk">Highest risk</option>
+              </select>
+              <button class="secondary-button secondary-button--quiet" id="clear-filters-btn" type="button">Clear</button>
+            </div>
+          </div>
+          <div class="watchlist-toolbar__meta">
+            <div class="toolbar-note" id="watchlist-summary"></div>
+            <div class="toolbar-note" id="watchlist-shortcuts">Press / to search</div>
           </div>
           <div id="watchlist-content" class="watchlist-list"></div>
         </section>
@@ -154,6 +188,16 @@
             </div>
 
             <div class="setting-row">
+              <label class="setting-copy" for="setting-cloud-sync">
+                <span id="label-cloud-sync">Cloud sync</span>
+              </label>
+              <label class="switch">
+                <input type="checkbox" id="setting-cloud-sync">
+                <span class="switch-ui"></span>
+              </label>
+            </div>
+
+            <div class="setting-row">
               <label class="setting-copy" for="setting-auto-refresh">
                 <span id="label-auto-refresh">Refresh saved items on popup open</span>
               </label>
@@ -173,6 +217,19 @@
               </select>
             </div>
           </div>
+
+          <div class="tools-panel">
+            <div class="tools-panel__copy">
+              <strong id="tools-title">Data tools</strong>
+              <p id="sync-status-copy">Local only</p>
+            </div>
+            <div class="tools-panel__actions">
+              <button class="secondary-button" id="sync-now-btn" type="button">Sync now</button>
+              <button class="secondary-button" id="export-btn" type="button">Export</button>
+              <button class="secondary-button" id="import-btn" type="button">Import</button>
+            </div>
+            <input id="import-file-input" type="file" accept="application/json" hidden>
+          </div>
         </section>
 
         <footer class="glass footer-card">
@@ -190,6 +247,8 @@
     <script src="lib/constants.js"></script>
     <script src="lib/i18n.js"></script>
     <script src="lib/utils.js"></script>
+    <script src="lib/paypal.js"></script>
+    <script src="lib/presentation.js"></script>
     <script src="script.js"></script>
   </body>
 </html>

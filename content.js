@@ -45,6 +45,13 @@
     urlPollTimer: null
   };
 
+  function isTypingTarget(target) {
+    if (!(target instanceof Element)) {
+      return false;
+    }
+    return Boolean(target.closest("input, textarea, select, [contenteditable='true']"));
+  }
+
   function isBackgroundRefreshTab() {
     return globalScope.location.hash.includes(Constants.REFRESH_HASH);
   }
@@ -167,7 +174,8 @@
           listing: parsedListing,
           analysis: null,
           comparables: [],
-          savedItem: null
+          savedItem: null,
+          updatedAt: null
         });
       }
 
@@ -197,7 +205,8 @@
           listing: parsedListing,
           analysis,
           comparables: state.comparables,
-          savedItem
+          savedItem,
+          updatedAt: state.updatedAt
         });
       }
 
@@ -225,7 +234,8 @@
           listing: state.listing,
           analysis: state.analysis,
           comparables: state.comparables,
-          savedItem: state.savedItem
+          savedItem: state.savedItem,
+          updatedAt: state.updatedAt
         });
       }
 
@@ -355,6 +365,38 @@
     }
   }
 
+  function handleKeyboardShortcut(event) {
+    if (isBackgroundRefreshTab() || event.defaultPrevented || event.ctrlKey || event.metaKey) {
+      return;
+    }
+
+    if (!event.altKey || !event.shiftKey || isTypingTarget(event.target)) {
+      return;
+    }
+
+    const key = String(event.key || "").toLowerCase();
+
+    if (key === "a") {
+      event.preventDefault();
+      analyzeCurrentPage({
+        force: true,
+        reason: "keyboard"
+      }).catch(() => {});
+      return;
+    }
+
+    if (key === "s") {
+      event.preventDefault();
+      handlePanelAction("save").catch(() => {});
+      return;
+    }
+
+    if (key === "d") {
+      event.preventDefault();
+      handlePanelAction("open-dashboard").catch(() => {});
+    }
+  }
+
   function getPageContext() {
     return {
       status: state.status,
@@ -438,7 +480,8 @@
             listing: state.listing,
             analysis: state.analysis,
             comparables: state.comparables,
-            savedItem: state.savedItem
+            savedItem: state.savedItem,
+            updatedAt: state.updatedAt
           });
         }
       }
@@ -456,6 +499,7 @@
     attachMessageHandlers();
     attachStorageListeners();
     startObservers();
+    globalScope.addEventListener("keydown", handleKeyboardShortcut, true);
 
     if (!isBackgroundRefreshTab()) {
       const settings = await Storage.getSettings();
@@ -473,7 +517,10 @@
     });
   }
 
-  globalScope.addEventListener("beforeunload", stopObservers);
+  globalScope.addEventListener("beforeunload", () => {
+    globalScope.removeEventListener("keydown", handleKeyboardShortcut, true);
+    stopObservers();
+  });
 
   init();
 }(globalThis));

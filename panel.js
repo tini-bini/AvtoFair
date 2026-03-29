@@ -1,9 +1,9 @@
 (function initPanel(globalScope) {
   const root = globalScope.AvtoFair = globalScope.AvtoFair || {};
-  const { Constants, Utils, Storage } = root;
+  const { Constants, Utils, Storage, Presentation } = root;
   const I18n = root.I18n;
+  const PayPal = root.PayPal;
   const t = (key) => I18n ? I18n.t(key) : key;
-  const tf = (key, vars) => I18n ? I18n.t(key, vars) : key;
 
   class FloatingPanel {
     constructor(options) {
@@ -164,7 +164,11 @@
       }
 
       if (action === "support") {
-        globalScope.open(Constants.SUPPORT_URL, "_blank", "noopener,noreferrer");
+        const support = this.getSupportConfig();
+        if (!support.valid || !support.url) {
+          return;
+        }
+        globalScope.open(support.url, "_blank", "noopener,noreferrer");
         return;
       }
 
@@ -340,27 +344,11 @@
     }
 
     getVerdictText(verdict) {
-      const keys = {
-        "great-deal": "greatDeal",
-        "good-price": "goodPrice",
-        "fair-price": "fairPrice",
-        "slightly-overpriced": "slightlyOverpriced",
-        "overpriced": "overpriced",
-        "insufficient-data": "noResult"
-      };
-      return t(keys[verdict] || "noResult");
+      return Presentation.getVerdictLabel(verdict);
     }
 
     getVerdictShortText(verdict) {
-      const keys = {
-        "great-deal": "underMarket",
-        "good-price": "belowMarket",
-        "fair-price": "nearMarket",
-        "slightly-overpriced": "aboveMarket",
-        "overpriced": "wellAboveMarket",
-        "insufficient-data": "checkingShort"
-      };
-      return t(keys[verdict] || "checkingShort");
+      return Presentation.getVerdictShortLabel(verdict);
     }
 
     getAvailableLangs() {
@@ -368,95 +356,26 @@
     }
 
     getVerdictMeta() {
-      const verdict = this.model.analysis?.verdict || "insufficient-data";
-      return Constants.VERDICTS[verdict] || Constants.VERDICTS["insufficient-data"];
+      return Presentation.getVerdictMeta(this.model.analysis?.verdict || "insufficient-data");
     }
 
     buildMainMessage(listing, analysis) {
-      if (!listing?.price) {
-        return t("mainMsgCannotReadPrice");
-      }
-
-      if (analysis.marketBlockMessage && (analysis.deviationPercent === null || analysis.deviationPercent === undefined)) {
-        return t("mainMsgMarketBlocked");
-      }
-
-      if (analysis.deviationPercent === null || analysis.deviationPercent === undefined) {
-        return t("noResult");
-      }
-
-      if (analysis.isFallbackEstimate) {
-        const rounded = Math.abs(Math.round(analysis.deviationPercent));
-        const dir = analysis.deviationPercent <= 0 ? t("below") : t("above");
-        return tf("mainMsgFallback", { percent: rounded, direction: dir });
-      }
-
-      const rounded = Math.abs(Math.round(analysis.deviationPercent));
-      if (analysis.deviationPercent <= -8) {
-        return tf("mainMsgMuchCheaper", { percent: rounded });
-      }
-      if (analysis.deviationPercent < -3) {
-        return t("mainMsgBitCheaper");
-      }
-      if (analysis.deviationPercent <= 3) {
-        return t("mainMsgClose");
-      }
-      if (analysis.deviationPercent < 8) {
-        return t("mainMsgBitMoreExpensive");
-      }
-      return tf("mainMsgMuchMoreExpensive", { percent: rounded });
+      return Presentation.buildMainMessage(listing, analysis);
     }
 
     buildDifferenceText(listing, analysis) {
-      if (!listing?.price || !analysis?.fairPrice) {
-        return null;
-      }
-
-      const prefix = analysis.isFallbackEstimate ? "~" : "";
-      const difference = listing.price - analysis.fairPrice;
-      const absolute = Utils.formatPrice(Math.abs(difference), listing.currency);
-
-      if (Math.abs(difference) < 200) return t("atMarketLevel");
-      if (difference < 0) return `${prefix}${absolute} ${t("below")}`;
-      return `${prefix}${absolute} ${t("above")}`;
+      return Presentation.buildDifferenceText(listing, analysis, this.settings.currencyFormat);
     }
 
     buildScoreDisplay(analysis) {
-      if (analysis.deviationPercent === null || analysis.deviationPercent === undefined) {
-        return "?";
+      if (!analysis || analysis.dealScore === null || analysis.dealScore === undefined) {
+        return "--";
       }
-      const rounded = Math.round(analysis.deviationPercent);
-      const prefix = rounded > 0 ? "+" : "";
-      return `${prefix}${rounded}%`;
+      return String(analysis.dealScore);
     }
 
     getSimpleReasons(analysis, listing) {
-      if (analysis.marketBlockMessage) {
-        return [
-          analysis.marketBlockMessage,
-          t("reasonTryRefresh")
-        ];
-      }
-
-      const reasons = [];
-
-      if (analysis.positiveSignals?.length) {
-        reasons.push(I18n ? I18n.translateSignalLabel(analysis.positiveSignals[0].label) : analysis.positiveSignals[0].label);
-      }
-
-      if (analysis.riskFlags?.length) {
-        reasons.push(I18n ? I18n.translateSignalLabel(analysis.riskFlags[0]) : analysis.riskFlags[0]);
-      }
-
-      if (analysis.comparableCount) {
-        reasons.push(`${analysis.comparableCount} ${t("comparables").toLowerCase()}`);
-      }
-
-      if (!reasons.length) {
-        reasons.push(this.buildMainMessage(listing, analysis));
-      }
-
-      return reasons.slice(0, 3);
+      return Presentation.buildReasonBullets(listing, analysis, 3);
     }
 
     getHeaderSubtitle() {
@@ -477,6 +396,13 @@
       return this.settings.themeMode === "light" ? "light" : "dark";
     }
 
+    getSupportConfig() {
+      return PayPal ? PayPal.getSupportConfig(Constants.SUPPORT_URL) : {
+        valid: false,
+        url: null
+      };
+    }
+
     async toggleTheme() {
       const next = this.getThemeMode() === "light" ? "dark" : "light";
       this.settings = Object.assign({}, this.settings, { themeMode: next });
@@ -491,6 +417,7 @@
         `<button type="button" class="avtofair-panel__lang-btn${lang === currentLang ? " is-active" : ""}" data-panel-action="lang-${lang}">${lang.toUpperCase()}</button>`
       ).join("");
       const theme = this.getThemeMode();
+      const support = this.getSupportConfig();
 
       return `
         <div class="avtofair-panel__header" data-avtofair-drag-handle="true">
@@ -502,7 +429,7 @@
             <div class="avtofair-panel__subtitle">${Utils.escapeHtml(this.getHeaderSubtitle())}</div>
           </div>
           <div class="avtofair-panel__header-actions">
-            <button type="button" class="avtofair-panel__support-btn" data-panel-action="support" title="${t("supportButton")}">
+            <button type="button" class="avtofair-panel__support-btn" data-panel-action="support" title="${support.valid ? t("supportButton") : t("supportUnavailable")}" ${support.valid ? "" : "disabled"}>
               $
             </button>
             <button type="button" class="avtofair-panel__theme-btn" data-panel-action="toggle-theme" title="${theme === "light" ? "Dark mode" : "Light mode"}">
@@ -549,14 +476,13 @@
       const reasons = this.getSimpleReasons(analysis, listing);
       const isFallback = Boolean(analysis.isFallbackEstimate);
       const saveLabel = this.model.savedItem ? t("saved") : t("save");
+      const sellerTrust = Presentation.getSellerTrustMeta(listing, analysis);
       const estPrefix = isFallback ? "~" : "";
-      const carPriceText = listing.price ? Utils.formatPrice(listing.price, listing.currency) : "—";
+      const carPriceText = listing.price ? Utils.formatPrice(listing.price, listing.currency) : "--";
       const normalPriceText = analysis.fairPrice
         ? `${estPrefix}${Utils.formatPrice(analysis.fairPrice, listing.currency)}`
         : null;
-      const confidenceLabel = isFallback
-        ? t("depreciationEst")
-        : t(analysis.confidence === "high" ? "highConfidence" : analysis.confidence === "medium" ? "mediumConfidence" : "lowConfidence");
+      const confidenceLabel = Presentation.getConfidenceLabel(analysis.confidence, isFallback);
       const scoreDisplay = this.buildScoreDisplay(analysis);
       const differenceText = this.buildDifferenceText(listing, analysis);
 
@@ -583,6 +509,13 @@
             ${this.renderField(t("data"), confidenceLabel)}
           </div>
 
+          <div class="avtofair-panel__microstats">
+            <span class="avtofair-panel__microstat">${Utils.escapeHtml(confidenceLabel)}</span>
+            <span class="avtofair-panel__microstat">${Utils.escapeHtml(`${analysis.comparableCount || 0} ${t("comparables").toLowerCase()}`)}</span>
+            ${sellerTrust ? `<span class="avtofair-panel__microstat">${Utils.escapeHtml(sellerTrust.label)}</span>` : ""}
+            ${this.model.updatedAt ? `<span class="avtofair-panel__microstat">${Utils.escapeHtml(`${t("updated")}: ${Utils.formatDateTime(this.model.updatedAt, this.settings.currencyFormat)}`)}</span>` : ""}
+          </div>
+
           ${reasons.length ? `
             <ul class="avtofair-panel__reasons">
               ${reasons.map((reason) => `<li>${Utils.escapeHtml(reason)}</li>`).join("")}
@@ -598,11 +531,11 @@
           ${this.detailsExpanded ? `
             <div class="avtofair-panel__details">
               <div class="avtofair-panel__detail-grid">
-                ${this.renderField(t("year"), listing.year ? String(listing.year) : "—")}
-                ${this.renderField(t("mileage"), listing.mileage ? `${Utils.formatNumber(listing.mileage)} km` : "—")}
-                ${this.renderField(t("fuel"), listing.fuel || "—")}
-                ${this.renderField(t("gearbox"), listing.transmission || "—")}
-                ${this.renderField(t("power"), listing.powerKw ? `${listing.powerKw} kW` : "—")}
+                ${this.renderField(t("year"), listing.year ? String(listing.year) : "--")}
+                ${this.renderField(t("mileage"), listing.mileage ? `${Utils.formatNumber(listing.mileage)} km` : "--")}
+                ${this.renderField(t("fuel"), listing.fuel || "--")}
+                ${this.renderField(t("gearbox"), listing.transmission || "--")}
+                ${this.renderField(t("power"), listing.powerKw ? `${listing.powerKw} kW` : "--")}
                 ${this.renderField(t("comparables"), isFallback ? t("noComparables") : `${analysis.comparableCount}`)}
               </div>
 
@@ -630,6 +563,8 @@
               </div>
             </div>
           ` : ""}
+
+          <div class="avtofair-panel__hint">${Utils.escapeHtml(t("keyboardHintPanel"))}</div>
         </div>
       `;
     }
@@ -721,3 +656,4 @@
     }
   };
 }(globalThis));
+
